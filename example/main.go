@@ -4,7 +4,7 @@ import (
 	"flag"
 	"time"
 
-	"github.com/mcuadros/go-rpi-rgb-led-matrix"
+	"github.com/mcuadros/go-rpi-ws281x"
 )
 
 var gpioPin = flag.Int("gpio-pin", 18, "GPIO pin")
@@ -17,7 +17,7 @@ const (
 )
 
 func main() {
-	c, err := ws2811.NewCanvas(*width, *height, &ws2811.DefaultConfig)
+	c, err := ws281x.NewCanvas(*width, *height, &ws281x.DefaultConfig)
 	if err != nil {
 		fatal(err)
 	}

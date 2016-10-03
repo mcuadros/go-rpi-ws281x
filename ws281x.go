@@ -1,4 +1,4 @@
-package ws2811
+package ws281x
 
 /*
 #cgo CFLAGS: -std=c99
