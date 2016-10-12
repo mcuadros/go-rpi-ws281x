@@ -18,26 +18,37 @@ import "C"
 
 import (
 	"fmt"
+	"image"
+	"image/color"
 	"unsafe"
 )
 
 type StripType int
 
 const (
-	StripRGB StripType = 0x100800
-	StripRBG StripType = 0x100008
-	StripGRB StripType = 0x081000
-	StripGBR StripType = 0x080010
-	StripBRG StripType = 0x001008
-	StripBGR StripType = 0x000810
+	// 4 color R, G, B and W ordering
+	StripRGBW StripType = 0x18100800
+	StripRBGW StripType = 0x18100008
+	StripGRBW StripType = 0x18081000
+	StripGBRW StripType = 0x18080010
+	StripBRGW StripType = 0x18001008
+	StripBGRW StripType = 0x18000810
+
+	// 3 color R, G and B ordering
+	StripRGB StripType = 0x00100800
+	StripRBG StripType = 0x00100008
+	StripGRB StripType = 0x00081000
+	StripGBR StripType = 0x00080010
+	StripBRG StripType = 0x00001008
+	StripBGR StripType = 0x00000810
 )
 
 var DefaultConfig = HardwareConfig{
 	Pin:        18,
 	Frequency:  800000,
 	DMA:        5,
-	Brightness: 255,
-	StripType:  StripRGB,
+	Brightness: 30,
+	StripType:  StripGRB,
 }
 
 type HardwareConfig struct {
@@ -54,7 +65,8 @@ type Canvas struct {
 	Width, Height int
 	Config        *HardwareConfig
 
-	leds *C.ws2811_t
+	leds   *C.ws2811_t
+	closed bool
 }
 
 func NewCanvas(w, h int, config *HardwareConfig) (*Canvas, error) {
@@ -124,31 +136,41 @@ func (c *Canvas) Show() error {
 	return nil
 }
 
-// GetPixelColor return an Color which allows access to the LED display data as
-// if it were a sequence of 24-bit RGB values.
-func (c *Canvas) GetPixelColor(x, y int) uint32 {
-	color := C.ws2811_get_led(c.leds, C.int(c.position(x, y)))
-	return uint32(color)
+func (c *Canvas) ColorModel() color.Model {
+	return color.RGBAModel
 }
 
-// SetPixelColor set LED at position x,y to the provided 24-bit color value.
-func (c *Canvas) SetPixelColor(x, y int, color uint32) {
-	C.ws2811_set_led(c.leds, C.int(c.position(x, y)), C.uint32_t(color))
+// Bounds return the topology of the Matrix
+func (c *Canvas) Bounds() image.Rectangle {
+	return image.Rect(0, 0, c.Width, c.Height)
+}
+
+// At return an Color which allows access to the LED display data as
+// if it were a sequence of 24-bit RGB values.
+func (c *Canvas) At(x, y int) color.Color {
+	//	color := C.ws2811_get_led(c.leds, C.int(c.position(x, y)))
+	//	return uint32(color)
+	return color.Black
+}
+
+// Set set LED at position x,y to the provided 24-bit color value.
+func (c *Canvas) Set(x, y int, color color.Color) {
+	C.ws2811_set_led(c.leds, C.int(c.position(x, y)), C.uint32_t(colorToUint32(color)))
 }
 
 func (c *Canvas) position(x, y int) int {
 	return x + (y * c.Width)
 }
 
-// NumPixels return the number of pixels in the display
-func (c *Canvas) NumPixels() int {
+// Size return the number of pixels in the display
+func (c *Canvas) Size() int {
 	return int(c.leds.channel[c.Config.Channel].count)
 }
 
 func (c *Canvas) Clear() error {
 	for y := 0; y < c.Height; y++ {
 		for x := 0; x < c.Width; x++ {
-			c.SetPixelColor(x, y, 0)
+			c.Set(x, y, color.Black)
 		}
 	}
 
@@ -156,12 +178,25 @@ func (c *Canvas) Clear() error {
 }
 
 func (c *Canvas) Close() {
+	if c.closed {
+		return
+	}
+
+	c.closed = true
 	C.ws2811_fini(c.leds)
+}
+
+func colorToUint32(c color.Color) uint32 {
+	// A color's RGBA method returns values in the range [0, 65535]
+	red, green, blue, alpha := c.RGBA()
+
+	return (alpha>>8)<<24 | (red>>8)<<16 | (green>>8)<<8 | blue>>8
 }
 
 func btoi(b bool) int {
 	if b {
 		return 1
 	}
+
 	return 0
 }
