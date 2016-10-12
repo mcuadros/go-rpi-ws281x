@@ -2,41 +2,53 @@ package main
 
 import (
 	"flag"
-	"image/color"
+	"image"
+	"os"
 	"time"
 
 	"github.com/mcuadros/go-rpi-ws281x"
+
+	"image/draw"
+	_ "image/png"
 )
 
 var (
 	pin        = flag.Int("gpio-pin", 18, "GPIO pin")
-	width      = flag.Int("width", 4, "LED matrix width")
-	height     = flag.Int("height", 8, "LED matrix height")
+	width      = flag.Int("width", 8, "LED matrix width")
+	height     = flag.Int("height", 32, "LED matrix height")
 	brightness = flag.Int("brightness", 64, "Brightness (0-255)")
+	img        = flag.String("image", "", "image path")
 )
 
 func main() {
+	f, err := os.Open(*img)
+	if err != nil {
+		fatal(err)
+	}
+
+	m, _, err := image.Decode(f)
+	if err != nil {
+		fatal(err)
+	}
+
 	config := ws281x.DefaultConfig
 	config.Brightness = *brightness
 	config.Pin = *pin
 
 	c, err := ws281x.NewCanvas(*width, *height, &config)
-	fatal(err)
+	if err != nil {
+		fatal(err)
+	}
 
 	defer c.Close()
+
 	err = c.Initialize()
 	fatal(err)
 
-	bounds := c.Bounds()
+	draw.Draw(c, c.Bounds(), m, image.ZP, draw.Over)
 
-	color := color.RGBA{255, 0, 0, 255}
-	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			c.Set(x, y, color)
-			c.Render()
-			time.Sleep(10 * time.Millisecond)
-		}
-	}
+	c.Render()
+	time.Sleep(time.Second * 5)
 }
 
 func init() {

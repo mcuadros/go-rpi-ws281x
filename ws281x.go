@@ -18,7 +18,6 @@ import "C"
 
 import (
 	"fmt"
-	"image"
 	"image/color"
 	"unsafe"
 )
@@ -52,6 +51,7 @@ var DefaultConfig = HardwareConfig{
 }
 
 type HardwareConfig struct {
+	Size       int
 	Pin        int
 	Frequency  int
 	DMA        int
@@ -61,20 +61,19 @@ type HardwareConfig struct {
 	StripType  StripType
 }
 
-type Canvas struct {
-	Width, Height int
-	Config        *HardwareConfig
+type WS281x struct {
+	Config *HardwareConfig
 
+	size   int
 	leds   *C.ws2811_t
 	closed bool
 }
 
-func NewCanvas(w, h int, config *HardwareConfig) (*Canvas, error) {
-	c := &Canvas{
-		Width:  w,
-		Height: h,
+func NewWS281x(size int, config *HardwareConfig) (Matrix, error) {
+	c := &WS281x{
 		Config: config,
 
+		size: size,
 		leds: (*C.ws2811_t)(C.malloc(C.sizeof_ws2811_t)),
 	}
 
@@ -89,14 +88,14 @@ func NewCanvas(w, h int, config *HardwareConfig) (*Canvas, error) {
 	return c, nil
 }
 
-func (c *Canvas) initializeChannels() {
+func (c *WS281x) initializeChannels() {
 	for ch := 0; ch < 2; ch++ {
 		c.setChannel(0, 0, 0, 0, false, StripRGB)
 	}
 
 	c.setChannel(
 		c.Config.Channel,
-		c.Width*c.Height,
+		c.size,
 		c.Config.Pin,
 		c.Config.Brightness,
 		c.Config.Invert,
@@ -105,7 +104,7 @@ func (c *Canvas) initializeChannels() {
 
 }
 
-func (c *Canvas) setChannel(ch, count, pin, brightness int, inverse bool, t StripType) {
+func (c *WS281x) setChannel(ch, count, pin, brightness int, inverse bool, t StripType) {
 	c.leds.channel[ch].count = C.int(count)
 	c.leds.channel[ch].gpionum = C.int(pin)
 	c.leds.channel[ch].brightness = C.int(brightness)
@@ -113,13 +112,14 @@ func (c *Canvas) setChannel(ch, count, pin, brightness int, inverse bool, t Stri
 	c.leds.channel[ch].strip_type = C.int(int(t))
 }
 
-func (c *Canvas) initializeController() {
+func (c *WS281x) initializeController() {
 	c.leds.freq = C.uint32_t(c.Config.Frequency)
 	c.leds.dmanum = C.int(c.Config.DMA)
 }
 
-// Begin Initialize library, must be called once before other functions are	called.
-func (c *Canvas) Begin() error {
+// Initialize initialize library, must be called once before other functions are
+// called.
+func (c *WS281x) Initialize() error {
 	if resp := int(C.ws2811_init(c.leds)); resp != 0 {
 		return fmt.Errorf("ws2811_init failed with code: %d", resp)
 	}
@@ -127,8 +127,8 @@ func (c *Canvas) Begin() error {
 	return nil
 }
 
-// Update the display with the data from the LED buffer
-func (c *Canvas) Show() error {
+// Render update the display with the data from the LED buffer
+func (c *WS281x) Render() error {
 	if resp := int(C.ws2811_render(c.leds)); resp != 0 {
 		return fmt.Errorf("ws2811_render failed with code: %d", resp)
 	}
@@ -136,54 +136,26 @@ func (c *Canvas) Show() error {
 	return nil
 }
 
-func (c *Canvas) ColorModel() color.Model {
-	return color.RGBAModel
-}
-
-// Bounds return the topology of the Matrix
-func (c *Canvas) Bounds() image.Rectangle {
-	return image.Rect(0, 0, c.Width, c.Height)
-}
-
 // At return an Color which allows access to the LED display data as
 // if it were a sequence of 24-bit RGB values.
-func (c *Canvas) At(x, y int) color.Color {
-	//	color := C.ws2811_get_led(c.leds, C.int(c.position(x, y)))
-	//	return uint32(color)
-	return color.Black
+func (c *WS281x) At(position int) color.Color {
+	color := C.ws2811_get_led(c.leds, C.int(position))
+	return uint32ToColor(uint32(color))
 }
 
 // Set set LED at position x,y to the provided 24-bit color value.
-func (c *Canvas) Set(x, y int, color color.Color) {
-	C.ws2811_set_led(c.leds, C.int(c.position(x, y)), C.uint32_t(colorToUint32(color)))
+func (c *WS281x) Set(position int, color color.Color) {
+	C.ws2811_set_led(c.leds, C.int(position), C.uint32_t(colorToUint32(color)))
 }
 
-func (c *Canvas) position(x, y int) int {
-	return x + (y * c.Width)
-}
-
-// Size return the number of pixels in the display
-func (c *Canvas) Size() int {
-	return int(c.leds.channel[c.Config.Channel].count)
-}
-
-func (c *Canvas) Clear() error {
-	for y := 0; y < c.Height; y++ {
-		for x := 0; x < c.Width; x++ {
-			c.Set(x, y, color.Black)
-		}
-	}
-
-	return c.Show()
-}
-
-func (c *Canvas) Close() {
+func (c *WS281x) Close() error {
 	if c.closed {
-		return
+		return nil
 	}
 
 	c.closed = true
 	C.ws2811_fini(c.leds)
+	return nil
 }
 
 func colorToUint32(c color.Color) uint32 {
@@ -191,6 +163,15 @@ func colorToUint32(c color.Color) uint32 {
 	red, green, blue, alpha := c.RGBA()
 
 	return (alpha>>8)<<24 | (red>>8)<<16 | (green>>8)<<8 | blue>>8
+}
+
+func uint32ToColor(u uint32) color.Color {
+	return color.RGBA{
+		uint8(u>>16) & 255,
+		uint8(u>>8) & 255,
+		uint8(u>>0) & 255,
+		uint8(u>>24) & 255,
+	}
 }
 
 func btoi(b bool) int {
