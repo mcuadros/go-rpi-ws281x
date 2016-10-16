@@ -1,4 +1,4 @@
-# go-rpi-ws281x [![GoDoc](https://godoc.org/github.com/mcuadros/go-rpi-ws281x?status.svg)](http://godoc.org/github.com/mcuadros/go-rpi-ws281x) [![Build Status](https://travis-cia.org/mcuadros/go-rpi-ws281x.svg?branch=master)](https://travis-ci.org/mcuadros/go-rpi-ws281x) 
+# go-rpi-ws281x [![GoDoc](https://godoc.org/github.com/mcuadros/go-rpi-ws281x?status.svg)](http://godoc.org/github.com/mcuadros/go-rpi-ws281x) 
 
 golang binding for [rpi_ws281x](https://github.com/jgarff/rpi_ws281x), userspace Raspberry Pi PWM library for WS281X LEDs. Supports any Raspberry and  WS2812, SK6812RGB and [SK6812RGBW](https://www.adafruit.com/category/168?q=SK6812RGBW&) LEDs strips, this includes [Unicorn pHAT](https://shop.pimoroni.com/products/unicorn-phat) and [NeoPixels](https://www.adafruit.com/category/168)
 
