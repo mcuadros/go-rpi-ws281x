@@ -1,8 +1,8 @@
 package ws281x
 
 /*
-#cgo CFLAGS: -std=c99
-#cgo LDFLAGS: -lws2811
+#cgo CFLAGS: -std=c99 -Ivendor/rpi_ws281x
+#cgo LDFLAGS: -lws2811 -Lvendor/rpi_ws281x
 #include <stdint.h>
 #include <string.h>
 #include <ws2811.h>
@@ -51,7 +51,6 @@ var DefaultConfig = HardwareConfig{
 }
 
 type HardwareConfig struct {
-	Size       int
 	Pin        int
 	Frequency  int
 	DMA        int
