@@ -49,13 +49,12 @@ func (c *Canvas) Bounds() image.Rectangle {
 	return image.Rect(0, 0, c.w, c.h)
 }
 
-// At return an Color which allows access to the LED display data as
-// if it were a sequence of 24-bit RGB values.
+// At returns the color of the pixel at (x, y)
 func (c *Canvas) At(x, y int) color.Color {
 	return c.m.At(c.position(x, y))
 }
 
-// Set set LED at position x,y to the provided 24-bit color value.
+// Set set LED at position x,y to the provided 24-bit color value
 func (c *Canvas) Set(x, y int, color color.Color) {
 	c.m.Set(c.position(x, y), color)
 }

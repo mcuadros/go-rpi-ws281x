@@ -22,6 +22,7 @@ import (
 	"unsafe"
 )
 
+// StripType layout
 type StripType int
 
 const (
@@ -42,24 +43,27 @@ const (
 	StripBGR StripType = 0x00000810
 )
 
+// DefaultConfig default WS281x configuration
 var DefaultConfig = HardwareConfig{
 	Pin:        18,
-	Frequency:  800000,
+	Frequency:  800000, // 800khz
 	DMA:        5,
 	Brightness: 30,
 	StripType:  StripGRB,
 }
 
+// HardwareConfig WS281x configuration
 type HardwareConfig struct {
-	Pin        int
-	Frequency  int
-	DMA        int
-	Invert     bool
-	Channel    int
-	Brightness int
-	StripType  StripType
+	Pin        int       // GPIO Pin with PWM alternate function, 0 if unused
+	Frequency  int       // the frequency of the display signal in hertz, can go as low as 400000
+	DMA        int       // the DMA channel to use
+	Invert     bool      // specifying if the signal line should be inverted
+	Channel    int       // PWM channel to us
+	Brightness int       // brightness value between 0 and 255
+	StripType  StripType // strip color layout
 }
 
+// WS281x matrix representation for ws281x
 type WS281x struct {
 	Config *HardwareConfig
 
@@ -68,6 +72,7 @@ type WS281x struct {
 	closed bool
 }
 
+// NewWS281x returns a new matrix using the given size and config
 func NewWS281x(size int, config *HardwareConfig) (Matrix, error) {
 	c := &WS281x{
 		Config: config,
@@ -147,6 +152,7 @@ func (c *WS281x) Set(position int, color color.Color) {
 	C.ws2811_set_led(c.leds, C.int(c.Config.Channel), C.int(position), cu)
 }
 
+// Close finalizes the ws281x interface
 func (c *WS281x) Close() error {
 	if c.closed {
 		return nil
