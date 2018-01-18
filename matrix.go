@@ -47,7 +47,7 @@ const (
 var DefaultConfig = HardwareConfig{
 	Pin:        18,
 	Frequency:  800000, // 800khz
-	DMA:        5,
+	DMA:        10,
 	Brightness: 30,
 	StripType:  StripGRB,
 }
