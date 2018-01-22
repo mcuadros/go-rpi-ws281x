@@ -47,7 +47,7 @@ const (
 var DefaultConfig = HardwareConfig{
 	Pin:        18,
 	Frequency:  800000, // 800khz
-	DMA:        5,
+	DMA:        10,
 	Brightness: 30,
 	StripType:  StripGRB,
 }
@@ -110,7 +110,7 @@ func (c *WS281x) initializeChannels() {
 func (c *WS281x) setChannel(ch, count, pin, brightness int, inverse bool, t StripType) {
 	c.leds.channel[ch].count = C.int(count)
 	c.leds.channel[ch].gpionum = C.int(pin)
-	c.leds.channel[ch].brightness = C.int(brightness)
+	c.leds.channel[ch].brightness = C.uint8_t(brightness)
 	c.leds.channel[ch].invert = C.int(btoi(inverse))
 	c.leds.channel[ch].strip_type = C.int(int(t))
 }
